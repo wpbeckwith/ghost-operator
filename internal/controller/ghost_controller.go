@@ -47,11 +47,23 @@ type GhostReconciler struct {
 // For more details, check Reconcile and its Result here:
 // - https://pkg.go.dev/sigs.k8s.io/controller-runtime@v0.19.0/pkg/reconcile
 func (r *GhostReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
+	// Get a logger instance
 	log := log.FromContext(ctx)
-	log.Info("Reconciling Ghost")
 
+	// Get a ptr to a Ghost instance
+	ghost := &blogv1.Ghost{}
+
+	// Using the Namesapced Name, let's get the resource into our ptr to a Ghost struct
+	if err := r.Get(ctx, req.NamespacedName, ghost); err != nil {
+		log.Error(err, "Failed to get Ghost")
+		return ctrl.Result{}, client.IgnoreNotFound(err)
+	}
+
+	// Output the ImageTag for the Ghost struct
+	log.Info("Reconciling Ghost", "imageTag", ghost.Spec.ImageTag, "team", ghost.ObjectMeta.Namespace)
 	log.Info("Reconciliation complete")
 	return ctrl.Result{}, nil
+
 }
 
 // SetupWithManager sets up the controller with the Manager.
