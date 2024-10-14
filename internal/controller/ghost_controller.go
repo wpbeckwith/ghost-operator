@@ -47,10 +47,10 @@ type GhostReconciler struct {
 // For more details, check Reconcile and its Result here:
 // - https://pkg.go.dev/sigs.k8s.io/controller-runtime@v0.19.0/pkg/reconcile
 func (r *GhostReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
-	_ = log.FromContext(ctx)
+	log := log.FromContext(ctx)
+	log.Info("Reconciling Ghost")
 
-	// TODO(user): your logic here
-
+	log.Info("Reconciliation complete")
 	return ctrl.Result{}, nil
 }
 
