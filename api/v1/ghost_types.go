@@ -34,8 +34,7 @@ type GhostSpec struct {
 
 // GhostStatus defines the observed state of Ghost
 type GhostStatus struct {
-	// INSERT ADDITIONAL STATUS FIELD - define observed state of cluster
-	// Important: Run "make" to regenerate code after modifying this file
+	Conditions []metav1.Condition `json:"conditions,omitempty"`
 }
 
 // +kubebuilder:object:root=true
