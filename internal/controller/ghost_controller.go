@@ -18,20 +18,29 @@ package controller
 
 import (
 	"context"
+	"k8s.io/apimachinery/pkg/api/resource"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/client-go/tools/record"
+	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
+	blogv1 "example.com/api/v1"
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/log"
-
-	blogv1 "example.com/api/v1"
 )
 
 // GhostReconciler reconciles a Ghost object
 type GhostReconciler struct {
 	client.Client
-	Scheme *runtime.Scheme
+	Scheme  *runtime.Scheme
+	recoder record.EventRecorder
 }
+
+const pvcNamePrefix = "ghost-data-pvc-"
+const deploymentNamePrefix = "ghost-deployment-"
+const svcNamePrefix = "ghost-service-"
 
 // +kubebuilder:rbac:groups=blog.example.com,resources=ghosts,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=blog.example.com,resources=ghosts/status,verbs=get;update;patch
@@ -65,9 +74,54 @@ func (r *GhostReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl
 	return ctrl.Result{}, nil
 
 }
+func (r *GhostReconciler) addPvcIfNotExists(ctx context.Context, ghost *blogv1.Ghost) error {
+	log := log.FromContext(ctx)
+
+	pvc := &corev1.PersistentVolumeClaim{}
+	team := ghost.ObjectMeta.Namespace
+	pvcName := pvcNamePrefix + team
+
+	err := r.Get(ctx, client.ObjectKey{Namespace: ghost.ObjectMeta.Namespace, Name: pvcName}, pvc)
+
+	if err == nil {
+		// PVC exists, we are done here!
+		return nil
+	}
+
+	// PVC does not exist, create it
+	desiredPVC := generateDesiredPVC(ghost, pvcName)
+	if err := controllerutil.SetControllerReference(ghost, desiredPVC, r.Scheme); err != nil {
+		return err
+	}
+
+	if err := r.Create(ctx, desiredPVC); err != nil {
+		return err
+	}
+	r.recoder.Event(ghost, corev1.EventTypeNormal, "PVCReady", "PVC created successfully")
+	log.Info("PVC created", "pvc", pvcName)
+	return nil
+}
+
+func generateDesiredPVC(ghost *blogv1.Ghost, pvcName string) *corev1.PersistentVolumeClaim {
+	return &corev1.PersistentVolumeClaim{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      pvcName,
+			Namespace: ghost.ObjectMeta.Namespace,
+		},
+		Spec: corev1.PersistentVolumeClaimSpec{
+			AccessModes: []corev1.PersistentVolumeAccessMode{corev1.ReadWriteOnce},
+			Resources: corev1.VolumeResourceRequirements{
+				Requests: corev1.ResourceList{
+					corev1.ResourceStorage: resource.MustParse("1Gi"),
+				},
+			},
+		},
+	}
+}
 
 // SetupWithManager sets up the controller with the Manager.
 func (r *GhostReconciler) SetupWithManager(mgr ctrl.Manager) error {
+	r.recoder = mgr.GetEventRecorderFor("ghost-controller")
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&blogv1.Ghost{}).
 		Complete(r)
