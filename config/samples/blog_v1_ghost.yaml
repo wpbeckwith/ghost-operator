@@ -7,4 +7,4 @@ metadata:
   name: ghost-sample
   namespace: marketing
 spec:
-  imageTag: latest
+  imageTag: alpine
