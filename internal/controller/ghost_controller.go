@@ -130,7 +130,7 @@ func createDesiredPVC(ghost *blogv1.Ghost, pvcName string) (*corev1.PersistentVo
 }
 
 func createDesiredDeployment(ghost *blogv1.Ghost) (*appsv1.Deployment, error) {
-	deploy, err := assets.GetDeploymentmFromFile("manifests/ghost_deployment.yaml")
+	deploy, err := assets.GetDeploymentFromFile("manifests/ghost_deployment.yaml")
 	if err != nil {
 		return nil, err
 	}
@@ -147,6 +147,20 @@ func createDesiredDeployment(ghost *blogv1.Ghost) (*appsv1.Deployment, error) {
 	deploy.Spec.Template.Spec.Volumes[0].PersistentVolumeClaim.ClaimName = "ghost-data-pvc-" + ghost.ObjectMeta.Namespace
 
 	return deploy, err
+}
+
+func createDesiredService(ghost *blogv1.Ghost) (*corev1.Service, error) {
+	service, err := assets.GetServiceFromFile("manifests/ghost_service.yaml")
+	if err != nil {
+		return nil, err
+	}
+
+	// initialize the object
+	service.Name = "ghost-service-" + ghost.ObjectMeta.Namespace
+	service.Namespace = ghost.ObjectMeta.Namespace
+	service.Spec.Selector["app"] = "ghost-" + ghost.ObjectMeta.Namespace
+
+	return service, nil
 }
 
 func generateDesiredPVC(ghost *blogv1.Ghost, pvcName string) *corev1.PersistentVolumeClaim {

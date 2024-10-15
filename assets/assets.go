@@ -36,7 +36,7 @@ func GetPersistentVolumeClaimFromFile(name string) (*corev1.PersistentVolumeClai
 	return pvcData, nil
 }
 
-func GetDeploymentmFromFile(name string) (*appsv1.Deployment, error) {
+func GetDeploymentFromFile(name string) (*appsv1.Deployment, error) {
 	deploymentBytes, err := manifests.ReadFile(name)
 	if err != nil {
 		return nil, err
@@ -47,4 +47,17 @@ func GetDeploymentmFromFile(name string) (*appsv1.Deployment, error) {
 	}
 	deploy := deploymentObject.(*appsv1.Deployment)
 	return deploy, nil
+}
+
+func GetServiceFromFile(name string) (*corev1.Service, error) {
+	serviceBytes, err := manifests.ReadFile(name)
+	if err != nil {
+		return nil, err
+	}
+	serviceObject, err := runtime.Decode(assetsCodecs.UniversalDecoder(appsv1.SchemeGroupVersion), serviceBytes)
+	if err != nil {
+		return nil, err
+	}
+	service := serviceObject.(*corev1.Service)
+	return service, nil
 }
