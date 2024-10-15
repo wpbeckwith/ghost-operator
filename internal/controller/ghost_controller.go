@@ -46,6 +46,10 @@ const svcNamePrefix = "ghost-service-"
 // +kubebuilder:rbac:groups=blog.example.com,resources=ghosts,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=blog.example.com,resources=ghosts/status,verbs=get;update;patch
 // +kubebuilder:rbac:groups=blog.example.com,resources=ghosts/finalizers,verbs=update
+//+kubebuilder:rbac:groups=blog.example.com,resources=ghosts/events,verbs=get;list;watch;create;update;patch
+//+kubebuilder:rbac:groups="",resources=persistentvolumeclaims,verbs=get;list;watch;create;update;patch;delete
+//+kubebuilder:rbac:groups=apps,resources=deployments,verbs=get;list;watch;create;update;patch;delete
+//+kubebuilder:rbac:groups="",resources=services,verbs=get;list;watch;create;update;patch;delete
 
 // Reconcile is part of the main kubernetes reconciliation loop which aims to
 // move the current state of the cluster closer to the desired state.
@@ -96,6 +100,7 @@ func (r *GhostReconciler) addPvcIfNotExists(ctx context.Context, ghost *blogv1.G
 	//	return err
 	//}
 
+	// Update owner reference
 	if err := controllerutil.SetControllerReference(ghost, desiredPVC, r.Scheme); err != nil {
 		return err
 	}
