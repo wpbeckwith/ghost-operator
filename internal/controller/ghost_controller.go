@@ -18,8 +18,12 @@ package controller
 
 import (
 	"context"
+	"embed"
+	appsv1 "k8s.io/api/apps/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime/serializer"
+	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/client-go/tools/record"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
@@ -41,6 +45,19 @@ type GhostReconciler struct {
 const pvcNamePrefix = "ghost-data-pvc-"
 const deploymentNamePrefix = "ghost-deployment-"
 const svcNamePrefix = "ghost-service-"
+
+var (
+	//go:embed assets
+	assets embed.FS
+
+	assetsScheme = runtime.NewScheme()
+	assetsCodecs = serializer.NewCodecFactory(assetsScheme)
+)
+
+func init() {
+	utilruntime.Must(corev1.AddToScheme(assetsScheme))
+	utilruntime.Must(appsv1.AddToScheme(assetsScheme))
+}
 
 // +kubebuilder:rbac:groups=blog.example.com,resources=ghosts,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=blog.example.com,resources=ghosts/status,verbs=get;update;patch
@@ -90,6 +107,11 @@ func (r *GhostReconciler) addPvcIfNotExists(ctx context.Context, ghost *blogv1.G
 
 	// PVC does not exist, create it
 	desiredPVC := generateDesiredPVC(ghost, pvcName)
+	//desiredPVC, err := generateDesiredPVC2(ghost, pvcName)
+	//if err != nil {
+	//	return err
+	//}
+
 	if err := controllerutil.SetControllerReference(ghost, desiredPVC, r.Scheme); err != nil {
 		return err
 	}
@@ -100,6 +122,24 @@ func (r *GhostReconciler) addPvcIfNotExists(ctx context.Context, ghost *blogv1.G
 	r.recoder.Event(ghost, corev1.EventTypeNormal, "PVCReady", "PVC created successfully")
 	log.Info("PVC created", "pvc", pvcName)
 	return nil
+}
+
+func generateDesiredPVC2(ghost *blogv1.Ghost, pvcName string) (*corev1.PersistentVolumeClaim, error) {
+	pvcDataBytes, err := assets.ReadFile("assets/ghost_data_pvc.yaml")
+	if err != nil {
+		return nil, err
+	}
+	pvcDataObject, err := runtime.Decode(assetsCodecs.UniversalDecoder(corev1.SchemeGroupVersion), pvcDataBytes)
+	if err != nil {
+		return nil, err
+	}
+	pvcData := pvcDataObject.(*corev1.PersistentVolumeClaim)
+
+	// initialize the PVC object
+	pvcData.Name = pvcName
+	pvcData.Namespace = ghost.ObjectMeta.Namespace
+
+	return pvcData, nil
 }
 
 func generateDesiredPVC(ghost *blogv1.Ghost, pvcName string) *corev1.PersistentVolumeClaim {
