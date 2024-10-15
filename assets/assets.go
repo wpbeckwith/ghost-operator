@@ -34,5 +34,17 @@ func GetPersistentVolumeClaimFromFile(name string) (*corev1.PersistentVolumeClai
 	}
 	pvcData := pvcDataObject.(*corev1.PersistentVolumeClaim)
 	return pvcData, nil
+}
 
+func GetDeploymentmFromFile(name string) (*appsv1.Deployment, error) {
+	deploymentBytes, err := manifests.ReadFile(name)
+	if err != nil {
+		return nil, err
+	}
+	deploymentObject, err := runtime.Decode(assetsCodecs.UniversalDecoder(appsv1.SchemeGroupVersion), deploymentBytes)
+	if err != nil {
+		return nil, err
+	}
+	deploy := deploymentObject.(*appsv1.Deployment)
+	return deploy, nil
 }

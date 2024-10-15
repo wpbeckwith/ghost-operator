@@ -121,11 +121,31 @@ func createDesiredPVC(ghost *blogv1.Ghost, pvcName string) (*corev1.PersistentVo
 		return nil, err
 	}
 
-	// initialize the PVC object
+	// initialize the object
 	pvcData.Name = pvcName
 	pvcData.Namespace = ghost.ObjectMeta.Namespace
 
 	return pvcData, nil
+}
+
+func createDesiredDeployment(ghost *blogv1.Ghost) (*appsv1.Deployment, error) {
+	deploy, err := assets.GetDeploymentmFromFile("manifests/ghost_deployment.yaml")
+	if err != nil {
+		return nil, err
+	}
+
+	// initialize the object
+	replicas := int32(1)
+	deploy.ObjectMeta.GenerateName = deploymentNamePrefix
+	deploy.ObjectMeta.Namespace = ghost.ObjectMeta.Namespace
+	deploy.ObjectMeta.Labels["app"] = "ghost-" + ghost.ObjectMeta.Namespace
+	deploy.Spec.Replicas = &replicas
+	deploy.Spec.Selector.MatchLabels["app"] = "ghost-" + ghost.ObjectMeta.Namespace
+	deploy.Spec.Template.Labels["app"] = "ghost-" + ghost.ObjectMeta.Namespace
+	deploy.Spec.Template.Spec.Containers[0].Image = "ghost:" + ghost.Spec.ImageTag
+	deploy.Spec.Template.Spec.Volumes[0].PersistentVolumeClaim.ClaimName = "ghost-data-pvc-" + ghost.ObjectMeta.Namespace
+
+	return deploy, err
 }
 
 func generateDesiredPVC(ghost *blogv1.Ghost, pvcName string) *corev1.PersistentVolumeClaim {
