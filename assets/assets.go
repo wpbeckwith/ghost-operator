@@ -54,7 +54,7 @@ func GetServiceFromFile(name string) (*corev1.Service, error) {
 	if err != nil {
 		return nil, err
 	}
-	serviceObject, err := runtime.Decode(assetsCodecs.UniversalDecoder(appsv1.SchemeGroupVersion), serviceBytes)
+	serviceObject, err := runtime.Decode(assetsCodecs.UniversalDecoder(corev1.SchemeGroupVersion), serviceBytes)
 	if err != nil {
 		return nil, err
 	}

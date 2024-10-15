@@ -70,7 +70,7 @@ func (r *GhostReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl
 	// Get a ptr to a Ghost instance
 	ghost := &blogv1.Ghost{}
 
-	// Using the Namesapced Name, let's get the resource into our ptr to a Ghost struct
+	// Using the Namespaced Name, let's get the resource into our ptr to a Ghost struct
 	if err := r.Get(ctx, req.NamespacedName, ghost); err != nil {
 		log.Error(err, "Failed to get Ghost")
 		return ctrl.Result{}, client.IgnoreNotFound(err)
@@ -144,11 +144,11 @@ func (r *GhostReconciler) addPvcIfNotExists(ctx context.Context, ghost *blogv1.G
 	}
 
 	// PVC does not exist, create it
-	desiredPVC := generateDesiredPVC(ghost, pvcName)
-	//desiredPVC, err := createDesiredPVC(ghost, pvcName)
-	//if err != nil {
-	//	return err
-	//}
+	//desiredPVC := generateDesiredPVC(ghost, pvcName)
+	desiredPVC, err := createDesiredPVC(ghost, pvcName)
+	if err != nil {
+		return err
+	}
 
 	// Update owner reference
 	if err := controllerutil.SetControllerReference(ghost, desiredPVC, r.Scheme); err != nil {
@@ -261,7 +261,11 @@ func (r *GhostReconciler) addOrUpdateDeployment(ctx context.Context, ghost *blog
 	}
 
 	// Deployment does not exist, create it
-	desiredDeployment := generateDesiredDeployment(ghost)
+	//desiredDeployment := generateDesiredDeployment(ghost)
+	desiredDeployment, err := createDesiredDeployment(ghost)
+	if err != nil {
+		return err
+	}
 	if err := controllerutil.SetControllerReference(ghost, desiredDeployment, r.Scheme); err != nil {
 		return err
 	}
@@ -353,7 +357,12 @@ func (r *GhostReconciler) addServiceIfNotExists(ctx context.Context, ghost *blog
 		return nil
 	}
 	// Service does not exist, create it
-	desiredService := generateDesiredService(ghost)
+	//desiredService := generateDesiredService(ghost)
+	desiredService, err := createDesiredService(ghost)
+	if err != nil {
+		return err
+	}
+
 	if err := controllerutil.SetControllerReference(ghost, desiredService, r.Scheme); err != nil {
 		return err
 	}
